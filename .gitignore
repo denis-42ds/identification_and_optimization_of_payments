@@ -1,0 +1,6 @@
+data/
+.env_rep/
+.git/
+__pycache__/
+.ipynb_checkpoints/
+.env
