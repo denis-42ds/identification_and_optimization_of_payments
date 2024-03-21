@@ -72,3 +72,36 @@ class DatasetExplorer:
 			ax1.pie(sizes, labels=labels, autopct='%1.0f%%')
 			plt.title('Соотношение классов целевой переменной', size=12)
 			plt.show()
+
+	def data_preprocessing(self, dropnas=True, date_features=None, int_features=None, drop_features=None):
+        # удаление дубликатов
+		self.dataset.drop_duplicates(inplace=True)
+		self.dataset.reset_index(drop=True, inplace=True)
+        # удаление пропущенных значений
+		if dropnas:
+			self.dataset.dropna(inplace=True)
+        
+        # изменение типов данных для дат
+		if date_features is not None:
+			if isinstance(date_features, list):
+				for col in date_features:
+					self.dataset[col] = pd.to_datetime(self.dataset[col], format='%Y-%m-%d %H:%M:%S.%f')
+			else:
+				self.dataset[date_features] = pd.to_datetime(self.dataset[date_features], format='%Y-%m-%d %H:%M:%S.%f')
+        
+        # изменение типов данных для целочисленных значений
+		if int_features is not None:
+			if isinstance(int_features, list):
+				self.dataset[int_features] = self.dataset[int_features].astype('int')
+			else:
+				self.dataset[int_features] = self.dataset[int_features].astype('int')
+        
+        # удаление ненужных признаков, если drop_features не равен None
+		if drop_features is not None:
+			if isinstance(drop_features, list):
+				self.dataset.drop(columns=drop_features, axis=1, inplace=True)
+        
+        # отображение обновлённого датасета
+		self.dataset.info()
+		display(self.dataset.head())
+		return self.dataset

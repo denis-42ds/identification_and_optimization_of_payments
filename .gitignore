@@ -3,4 +3,5 @@ __pycache__/
 .env_rep/
 .git/
 .ipynb_checkpoints/
+.run_jupyter.sh
 .env
