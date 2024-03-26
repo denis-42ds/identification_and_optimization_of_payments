@@ -37,10 +37,11 @@ class DatasetExplorer:
 
 		print(f"""количество пропущенных значений:\n{self.dataset.isnull().sum()}""")
 		if self.dataset.isnull().values.any():
-			sns.heatmap(self.dataset.isnull(), cmap=sns.color_palette(['#000099', '#ffff00']))
-			plt.xticks(rotation=90)
-			plt.title('Визуализация количества пропущенных значений', size=12, y=1.02)
-			plt.show()
+			if self.dataset.shape[1] <= 20 or self.dataset.shape[0] < 800000:
+				sns.heatmap(self.dataset.isnull(), cmap=sns.color_palette(['#000099', '#ffff00']))
+				plt.xticks(rotation=90)
+				plt.title('Визуализация количества пропущенных значений', size=12, y=1.02)
+				plt.show()
 
 		# Вывод признаков с пропущенными значениями
 		missing_values_ratios = {}
@@ -84,17 +85,41 @@ class DatasetExplorer:
         # изменение типов данных для дат
 		if date_features is not None:
 			if isinstance(date_features, list):
+				rows_deleted = 0
 				for col in date_features:
-					self.dataset[col] = pd.to_datetime(self.dataset[col], format='%Y-%m-%d %H:%M:%S.%f')
-			else:
+					try:
+						self.dataset[col] = pd.to_datetime(self.dataset[col], format='%Y-%m-%d %H:%M:%S.%f')
+					except pd.errors.OutOfBoundsDatetime as e:
+						error_message = str(e)
+						print(f"Ошибка при обработке даты в столбце {col}: {error_message}")
+						error_indices = self.dataset[self.dataset[col] == error_message].index
+						self.dataset.drop(index=error_indices, inplace=True)
+						rows_deleted += len(error_indices)
+				if rows_deleted > 0:
+					print(f"По причине некорректного значения даты удалено {rows_deleted} строк.")
+		else:
+			try:
 				self.dataset[date_features] = pd.to_datetime(self.dataset[date_features], format='%Y-%m-%d %H:%M:%S.%f')
+			except pd.errors.OutOfBoundsDatetime as e:
+				error_message = str(e)
+				print(f"Ошибка при обработке даты в столбце {date_features}: {error_message}")
+				error_indices = self.dataset[self.dataset[date_features] == error_message].index
+				self.dataset.drop(index=error_indices, inplace=True)
+				print("По причине некорректного значения даты удалено {len(error_indices)} строк.")
         
         # изменение типов данных для целочисленных значений
 		if int_features is not None:
 			if isinstance(int_features, list):
-				self.dataset[int_features] = self.dataset[int_features].astype('int')
+				for col in int_features:
+					try:
+						self.dataset[col] = self.dataset[col].astype('int')
+					except pd.errors.IntCastingNaNError:
+						self.dataset[col] = self.dataset[col].fillna(-1).astype('int')
 			else:
-				self.dataset[int_features] = self.dataset[int_features].astype('int')
+				try:
+					self.dataset[int_features] = self.dataset[int_features].astype('int')
+				except pd.errors.IntCastingNaNError:
+					self.dataset[int_features] = self.dataset[int_features].fillna(-1).astype('int')
         
         # удаление ненужных признаков, если drop_features не равен None
 		if drop_features is not None:
